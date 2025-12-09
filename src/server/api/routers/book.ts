@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { title } from 'process';
+import { CopyStatus } from 'generated/prisma';
 import { z } from 'zod';
 
 import {
@@ -7,21 +7,47 @@ import {
 	publicProcedure,
 	librarianProcedure,
 } from '~/server/api/trpc';
+import {
+	cursorPaginationSchema,
+	paginateWithCursor,
+	type CursorPaginationInput,
+} from '~/server/utils/pagination';
 
 export const bookRouter = createTRPCRouter({
 
 	getAll: publicProcedure
-		.query(async ({ ctx }) => {
-			return await ctx.db.author.findMany({
-				orderBy: { name: "asc" },
-				include: {
-					books: {
+		.input(cursorPaginationSchema.optional())
+		.query(async ({ ctx, input }) => {
+			const paginationInput: CursorPaginationInput = input ?? {};
+
+			return paginateWithCursor(
+				async ({ take, cursor, orderBy }) => {
+					return await ctx.db.book.findMany({
+						take,
+						cursor: cursor ? { id: cursor.id } : undefined,
+						orderBy: orderBy ?? { createdAt: "desc" },
 						include: {
-							book: true,
+							authors: {
+								include: {
+									author: true,
+								},
+							},
+							copies: {
+								where: {
+									status: CopyStatus.AVAILABLE,
+								},
+							},
+							_count: {
+								select: {
+									copies: true,
+								},
+							},
 						},
-					},
+					});
 				},
-			});
+				paginationInput,
+				{ id: "desc" },
+			);
 		}),
 
 	getById: publicProcedure
@@ -55,41 +81,50 @@ export const bookRouter = createTRPCRouter({
 		.input(
 			z.object({
 				query: z.string().min(1),
-				limit: z.number().min(1).max(50).default(20)
-			}))
+			}).merge(cursorPaginationSchema),
+		)
 		.query(async ({ ctx, input }) => {
-			return ctx.db.book.findMany({
-				where: {
-					OR: [
-						{ title: { contains: input.query, mode: "insensitive" } },
-						{ isbn: { contains: input.query, mode: "insensitive" } },
-						{ isbn13: { contains: input.query, mode: "insensitive" } },
-						{
-							authors: {
-								some: {
-									author: {
-										name: { contains: input.query, mode: "insensitive" },
+			const { query, ...paginationInput } = input;
+
+			return paginateWithCursor(
+				async ({ take, cursor, orderBy }) => {
+					return await ctx.db.book.findMany({
+						take,
+						cursor: cursor ? { id: cursor.id } : undefined,
+						orderBy: orderBy ?? { title: "asc" },
+						where: {
+							OR: [
+								{ title: { contains: query } },
+								{ isbn: { contains: query } },
+								{ isbn13: { contains: query } },
+								{
+									authors: {
+										some: {
+											author: {
+												name: { contains: query },
+											},
+										},
 									},
+								},
+							],
+						},
+						include: {
+							authors: {
+								include: {
+									author: true,
+								},
+							},
+							copies: {
+								where: {
+									status: CopyStatus.AVAILABLE,
 								},
 							},
 						},
-					]
+					});
 				},
-				take: input.limit,
-				include: {
-					authors: {
-						include: {
-							author: true,
-						},
-					},
-					copies: {
-						where: {
-							status: "AVAILABLE",
-						},
-					},
-				},
-				orderBy: { title: "asc" },
-			});
+				paginationInput,
+				{ id: "asc" },
+			);
 		}),
 
 	create: librarianProcedure
@@ -175,7 +210,7 @@ export const bookRouter = createTRPCRouter({
 				}
 				: undefined;
 
-			return ctx.db.book.update({
+			return await ctx.db.book.update({
 				where: { id },
 				data: {
 					...bookData,
@@ -195,7 +230,7 @@ export const bookRouter = createTRPCRouter({
 	delete: librarianProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.book.delete({
+			return await ctx.db.book.delete({
 				where: { id: input.id },
 			});
 		}),

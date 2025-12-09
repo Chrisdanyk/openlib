@@ -7,21 +7,38 @@ import {
   publicProcedure,
   librarianProcedure,
 } from "~/server/api/trpc";
+import {
+	cursorPaginationSchema,
+	paginateWithCursor,
+	type CursorPaginationInput,
+} from "~/server/utils/pagination";
 
 export const authorRouter = createTRPCRouter({
 
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    return await ctx.db.author.findMany({
-      orderBy: { name: "asc" },
-      include: {
-        books: {
-          include: {
-            book: true,
-          },
+  getAll: publicProcedure
+    .input(cursorPaginationSchema.optional())
+    .query(async ({ ctx, input }) => {
+      const paginationInput: CursorPaginationInput = input ?? {};
+
+      return paginateWithCursor(
+        async ({ take, cursor, orderBy }) => {
+          return await ctx.db.author.findMany({
+            take,
+            cursor: cursor ? { id: cursor.id } : undefined,
+            orderBy: orderBy ?? { name: "asc" },
+            include: {
+              books: {
+                include: {
+                  book: true,
+                },
+              },
+            },
+          });
         },
-      },
-    });
-  }),
+        paginationInput,
+        { id: "asc" },
+      );
+    }),
 
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
@@ -53,18 +70,28 @@ export const authorRouter = createTRPCRouter({
     }),
 
   search: publicProcedure
-    .input(z.object({ query: z.string().min(1) }))
+    .input(
+      z.object({ query: z.string().min(1) }).merge(cursorPaginationSchema),
+    )
     .query(async ({ ctx, input }) => {
-      return await ctx.db.author.findMany({
-        where: {
-          name: { 
-            contains: input.query, 
-            mode: "insensitive",
-          },
+      const { query, ...paginationInput } = input;
+
+      return paginateWithCursor(
+        async ({ take, cursor, orderBy }) => {
+          return await ctx.db.author.findMany({
+            take,
+            cursor: cursor ? { id: cursor.id } : undefined,
+            orderBy: orderBy ?? { name: "asc" },
+            where: {
+              name: {
+                contains: query,
+              },
+            },
+          });
         },
-        orderBy: { name: "asc" },
-        take: 20,
-      });
+        paginationInput,
+        { id: "asc" },
+      );
     }),
 
   create: librarianProcedure
