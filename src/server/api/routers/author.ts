@@ -11,7 +11,7 @@ import {
 export const authorRouter = createTRPCRouter({
 
   getAll: publicProcedure.query(async ({ ctx }) => {
-    return ctx.db.author.findMany({
+    return await ctx.db.author.findMany({
       orderBy: { name: "asc" },
       include: {
         books: {
@@ -55,7 +55,7 @@ export const authorRouter = createTRPCRouter({
   search: publicProcedure
     .input(z.object({ query: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.author.findMany({
+      return await ctx.db.author.findMany({
         where: {
           name: { 
             contains: input.query, 
@@ -74,7 +74,7 @@ export const authorRouter = createTRPCRouter({
         bio: z.string().optional() 
       }),)
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.author.create({
+      return await ctx.db.author.create({
         data: { 
           name: input.name, 
           bio: input.bio,
@@ -92,7 +92,7 @@ export const authorRouter = createTRPCRouter({
         }))
       .mutation(async ({ ctx, input }) => {
         const {id, ...data} = input;
-        return ctx.db.author.update({
+        return await ctx.db.author.update({
           where: {id},
           data,
         });
@@ -101,7 +101,7 @@ export const authorRouter = createTRPCRouter({
     delete: librarianProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        return ctx.db.author.delete({
+        return await ctx.db.author.delete({
           where: { id: input.id },
         });
       }),

@@ -1,0 +1,15 @@
+{
+    "nextjs.files.alias": "~",               // Import alias (e.g., "~", "@", "#")
+    "nextjs.files.extension": "tsx",         // Default file extension
+    "nextjs.files.showType": true,           // Append type to filename (e.g., "component")
+    "nextjs.files.include": ["js","jsx","ts","tsx"],
+    "nextjs.files.exclude": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.*/**"
+    ],
+    "nextjs.files.watch": ["components","pages","api"],
+    "nextjs.files.showPath": true,           // Display path in file name labels
+    "nextjs.server.turbopack": true,             // Enable Turbo mode (Next.js 14+)
+    "nextjs.server.experimentalHttps": true  // Enable HTTPS (Next.js 14+)
+  }
