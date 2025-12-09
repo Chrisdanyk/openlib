@@ -131,3 +131,41 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+
+/**
+ * Librarian procedure
+ * Only accessible to LIBRARIAN or ADMIN roles
+ */
+export const librarianProcedure = protectedProcedure.use(({ ctx, next }) => {
+  const role = ctx.session.user.role;
+  if (role !== "LIBRARIAN" && role !== "ADMIN") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only librarians and admins can access this resource",
+    });
+  }
+  return next({
+    ctx: {
+      session: ctx.session,
+    },
+  });
+});
+
+/**
+ * Admin procedure
+ * Only accessible to ADMIN role
+ */
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== "ADMIN") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only admins can access this resource",
+    });
+  }
+  return next({
+    ctx: {
+      session: ctx.session,
+    },
+  });
+});

@@ -61,9 +61,28 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  accounts      Account[]
-  sessions      Session[]
-  posts         Post[]
+  role          UserRole  @default(MEMBER)
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Library relations
+  loans        Loan[]
+  reservations Reservation[]
+  fines        Fine[]
+
+  // Optional: Keep posts if you still need them
+  posts Post[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum UserRole {
+  MEMBER
+  LIBRARIAN
+  ADMIN
 }
 
 model VerificationToken {
@@ -72,4 +91,179 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// -----------------------------------
+// LIBRARY MANAGEMENT MODELS
+// -----------------------------------
+
+// -----------------------------------
+// BOOK & AUTHOR
+// -----------------------------------
+
+model Book {
+  id            String  @id @default(cuid())
+  title         String
+  description   String?
+  isbn          String? @unique
+  isbn13        String? @unique
+  publishedYear Int?
+  publisher     String?
+  language      String? @default("en")
+  pageCount     Int?
+  coverImage    String?
+
+  authors      BookAuthor[]
+  copies       BookCopy[]
+  reservations Reservation[]
+  categories   BookCategory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title])
+  @@index([isbn])
+  @@index([isbn13])
+}
+
+model Author {
+  id    String       @id @default(cuid())
+  name  String
+  bio   String?
+  books BookAuthor[]
+
+  @@index([name])
+}
+
+model BookAuthor {
+  bookId   String
+  authorId String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+}
+
+// -----------------------------------
+// CATEGORIES (Optional)
+// -----------------------------------
+
+model Category {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  description String?
+  books       BookCategory[]
+}
+
+model BookCategory {
+  bookId     String
+  categoryId String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+}
+
+// -----------------------------------
+// PHYSICAL COPIES
+// -----------------------------------
+
+model BookCopy {
+  id       String     @id @default(cuid())
+  code     String     @unique
+  bookId   String
+  status   CopyStatus @default(AVAILABLE)
+  location String?
+  notes    String?
+
+  book  Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  loans Loan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([status])
+}
+
+enum CopyStatus {
+  AVAILABLE
+  BORROWED
+  LOST
+  DAMAGED
+  MAINTENANCE
+}
+
+// -----------------------------------
+// LOANS
+// -----------------------------------
+
+model Loan {
+  id           String    @id @default(cuid())
+  userId       String
+  bookCopyId   String
+  borrowedAt   DateTime  @default(now())
+  dueAt        DateTime
+  returnedAt   DateTime?
+  renewedAt    DateTime?
+  renewalCount Int       @default(0)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookCopy BookCopy @relation(fields: [bookCopyId], references: [id], onDelete: Cascade)
+  fine     Fine?
+
+  @@index([userId])
+  @@index([bookCopyId])
+  @@index([dueAt])
+  @@index([returnedAt])
+}
+
+// -----------------------------------
+// RESERVATIONS
+// -----------------------------------
+
+model Reservation {
+  id          String            @id @default(cuid())
+  userId      String
+  bookId      String
+  status      ReservationStatus @default(PENDING)
+  reservedAt  DateTime          @default(now())
+  fulfilledAt DateTime?
+  expiresAt   DateTime?
+  notifiedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bookId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum ReservationStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
+  EXPIRED
+}
+
+// -----------------------------------
+// FINES
+// -----------------------------------
+
+model Fine {
+  id        String    @id @default(cuid())
+  userId    String
+  loanId    String    @unique
+  amount    Float
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paid])
 }
