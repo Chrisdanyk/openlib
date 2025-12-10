@@ -35,3 +35,29 @@ export function getDaysOverdue(dueAt: Date): number {
   const diffTime = now.getTime() - dueAt.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * Fine configuration
+ */
+export const FINE_CONFIG = {
+  // Fine amount per day overdue
+  FINE_PER_DAY: 0.5,
+  
+  // Maximum fine amount (cap)
+  MAX_FINE: 50.0,
+  
+  // Grace period in days (no fine if returned within this period)
+  GRACE_PERIOD_DAYS: 0,
+} as const;
+
+/**
+ * Calculate fine amount for overdue loan
+ */
+export function calculateFine(daysOverdue: number): number {
+  if (daysOverdue <= FINE_CONFIG.GRACE_PERIOD_DAYS) {
+    return 0;
+  }
+  
+  const fine = daysOverdue * FINE_CONFIG.FINE_PER_DAY;
+  return Math.min(fine, FINE_CONFIG.MAX_FINE);
+}

@@ -4,6 +4,8 @@ import { authorRouter } from "~/server/api/routers/author";
 import { bookRouter } from "~/server/api/routers/book";
 import { bookCopyRouter } from "~/server/api/routers/bookCopy";
 import { loanRouter } from "~/server/api/routers/loan";
+import { reservationRouter } from "~/server/api/routers/reservation";
+import { fineRouter } from "~/server/api/routers/fine";
 
 
 /**
@@ -17,6 +19,8 @@ export const appRouter = createTRPCRouter({
   book: bookRouter,
   bookCopy: bookCopyRouter,
   loan: loanRouter,
+  reservation: reservationRouter,
+  fine: fineRouter,
 });
 
 // export type definition of API
