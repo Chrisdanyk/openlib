@@ -28,7 +28,7 @@ export const reservationRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.reservation.findMany({
+          return await ctx.db.reservation.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { reservedAt: "desc" },
@@ -70,7 +70,7 @@ export const reservationRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.reservation.findMany({
+          return await ctx.db.reservation.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { reservedAt: "asc" }, // Oldest first
@@ -121,7 +121,7 @@ export const reservationRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.reservation.findMany({
+          return await ctx.db.reservation.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { reservedAt: "desc" },
@@ -162,7 +162,7 @@ export const reservationRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.reservation.findMany({
+          return await ctx.db.reservation.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { reservedAt: "asc" },
@@ -296,7 +296,7 @@ export const reservationRouter = createTRPCRouter({
       // Create reservation
       const expiresAt = calculateReservationExpiry();
 
-      return ctx.db.reservation.create({
+      return await ctx.db.reservation.create({
         data: {
           userId: ctx.session.user.id,
           bookId: input.bookId,
@@ -356,7 +356,7 @@ export const reservationRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.reservation.update({
+      return await ctx.db.reservation.update({
         where: { id: input.id },
         data: {
           status: ReservationStatus.CANCELLED,
@@ -438,7 +438,7 @@ export const reservationRouter = createTRPCRouter({
       }
 
       // Update reservation status
-      return ctx.db.reservation.update({
+      return await ctx.db.reservation.update({
         where: { id: input.id },
         data: {
           status: ReservationStatus.FULFILLED,

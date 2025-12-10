@@ -6,6 +6,10 @@ import { bookCopyRouter } from "~/server/api/routers/bookCopy";
 import { loanRouter } from "~/server/api/routers/loan";
 import { reservationRouter } from "~/server/api/routers/reservation";
 import { fineRouter } from "~/server/api/routers/fine";
+import { categoryRouter } from "~/server/api/routers/category";
+import { userRouter } from "~/server/api/routers/user";
+import { statsRouter } from "~/server/api/routers/stats";
+import { searchRouter } from "~/server/api/routers/search";
 
 
 /**
@@ -21,6 +25,10 @@ export const appRouter = createTRPCRouter({
   loan: loanRouter,
   reservation: reservationRouter,
   fine: fineRouter,
+  category: categoryRouter,
+  user: userRouter,
+  stats: statsRouter,
+  search: searchRouter,
 });
 
 // export type definition of API

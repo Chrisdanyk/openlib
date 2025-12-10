@@ -23,7 +23,7 @@ export const fineRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.fine.findMany({
+          return await ctx.db.fine.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { createdAt: "desc" },
@@ -78,7 +78,7 @@ export const fineRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.fine.findMany({
+          return await ctx.db.fine.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { createdAt: "desc" },
@@ -133,7 +133,7 @@ export const fineRouter = createTRPCRouter({
 
       return paginateWithCursor(
         async ({ take, cursor, orderBy }) => {
-          return ctx.db.fine.findMany({
+          return await ctx.db.fine.findMany({
             take,
             cursor: cursor ? { id: cursor.id } : undefined,
             orderBy: orderBy ?? { createdAt: "desc" },
@@ -266,7 +266,7 @@ export const fineRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.fine.create({
+      return await ctx.db.fine.create({
         data: {
           userId: loan.userId,
           loanId: input.loanId,
@@ -334,7 +334,7 @@ export const fineRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.fine.update({
+      return await ctx.db.fine.update({
         where: { id: input.id },
         data: {
           paid: true,
@@ -438,7 +438,7 @@ export const fineRouter = createTRPCRouter({
         });
       }
 
-      return ctx.db.fine.update({
+      return await ctx.db.fine.update({
         where: { id: input.id },
         data: {
           amount: input.amount,
