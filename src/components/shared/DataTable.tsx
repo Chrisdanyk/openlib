@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { Skeleton } from "~/components/ui/skeleton";
 import { ChevronLeft, ChevronRight, Search, ArrowUpDown } from "lucide-react";
 import { cn } from "~/lib/utils";
 
@@ -117,13 +118,7 @@ export function DataTable<T>({
       </div>
 
       {/* Table */}
-      <div className="relative">
-        {loading && (
-          <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-            <div className="animate-pulse-soft w-8 h-8 rounded-lg bg-primary" />
-          </div>
-        )}
-        <Table>
+      <Table>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
@@ -151,7 +146,18 @@ export function DataTable<T>({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {loading ? (
+              // Show skeleton rows when loading
+              Array.from({ length: limit }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  {columns.map((column) => (
+                    <TableCell key={column.key} className={column.className}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : data.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
@@ -173,7 +179,6 @@ export function DataTable<T>({
             )}
           </TableBody>
         </Table>
-      </div>
 
       {/* Footer with pagination */}
       <div className="flex items-center justify-between p-4 border-t border-border">

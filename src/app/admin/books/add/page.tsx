@@ -254,17 +254,10 @@ export default function AddBookPage() {
                 <Link href="/admin/books">Cancel</Link>
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Adding...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Book
-                  </span>
-                )}
+                <span className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  {loading ? "Adding..." : "Add Book"}
+                </span>
               </Button>
             </div>
           </form>

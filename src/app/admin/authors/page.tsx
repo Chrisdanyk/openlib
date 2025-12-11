@@ -50,10 +50,7 @@ export default function AdminAuthorsPage() {
             <User className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-medium">{author.name}</p>
-            {author.bio && (
-              <p className="text-xs text-muted-foreground line-clamp-1">{author.bio}</p>
-            )}
+            <p className="font-medium text-muted-foreground">{author.name}</p>
           </div>
         </div>
       ),

@@ -225,11 +225,7 @@ export default function LandingPage() {
             {/* Search Results */}
             {searchQuery.length >= 1 && (
               <div className="mt-8">
-                {searchLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  </div>
-                ) : (bookResults.length > 0 || authorResults.length > 0) ? (
+                {(bookResults.length > 0 || authorResults.length > 0) ? (
                   <div className="space-y-8">
                     {bookResults.length > 0 && (
                       <div>

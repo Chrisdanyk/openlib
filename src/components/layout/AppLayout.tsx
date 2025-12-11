@@ -21,13 +21,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [status, router]);
 
   if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-pulse-soft">
-          <div className="w-10 h-10 rounded-xl bg-primary" />
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (!session) {

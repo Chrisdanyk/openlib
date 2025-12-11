@@ -170,17 +170,10 @@ export default function LoginPage() {
               />
 
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Signing in...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <LogIn className="w-4 h-4" />
-                    Sign in
-                  </span>
-                )}
+                <span className="flex items-center gap-2">
+                  <LogIn className="w-4 h-4" />
+                  {loading ? "Signing in..." : "Sign in"}
+                </span>
               </Button>
             </form>
           </Form>

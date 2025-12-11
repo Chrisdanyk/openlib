@@ -243,17 +243,10 @@ export default function RegisterPage() {
               />
 
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Creating account...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4" />
-                    Create account
-                  </span>
-                )}
+                <span className="flex items-center gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  {loading ? "Creating account..." : "Create account"}
+                </span>
               </Button>
             </form>
           </Form>
