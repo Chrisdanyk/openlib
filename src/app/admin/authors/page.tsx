@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PageHeader } from "~/components/shared/PageHeader";
 import { type Column, DataTable } from "~/components/shared/DataTable";
 import { AppLayout } from "~/components/layout/AppLayout";
-import { Button } from "~/components/ui/button";
+import { Button, buttonVariants } from "~/components/ui/button";
 import { Plus, User, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 
@@ -35,9 +35,9 @@ export default function AdminAuthorsPage() {
   const data = (search.length > 0 ? searchData : authorsData) ?? null;
   const isLoadingData = search.length > 0 ? searchLoading : isLoading;
 
-  const authors = data?.results ?? [];
-  const total = data?.items ?? 0;
-  const pageCount = data?.pages ?? 1;
+  const authors: Author[] = data?.results as Author[] ?? [];
+  const total: number = data?.items as number ?? 0;
+  const pageCount: number = data?.pages as number ?? 1;
 
   const columns: Column<Author>[] = [
     {
@@ -97,12 +97,10 @@ export default function AdminAuthorsPage() {
           title="Authors"
           description="Manage authors in your library"
           actions={
-            <Button asChild>
-              <Link href="/admin/authors/add">
+              <Link href="/admin/authors/add" className={buttonVariants()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Author
               </Link>
-            </Button>
           }
         />
 
