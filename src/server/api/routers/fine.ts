@@ -8,25 +8,25 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 import { FINE_CONFIG, calculateFine, getDaysOverdue } from "~/server/utils/loan-config";
 
 export const fineRouter = createTRPCRouter({
   // Get all fines (librarian only)
   getAll: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.fine.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { createdAt: "desc" },
+            skip,
+            orderBy: { createdAt: "desc" },
             include: {
               user: {
                 select: {
@@ -55,8 +55,10 @@ export const fineRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.fine.count();
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
@@ -67,7 +69,7 @@ export const fineRouter = createTRPCRouter({
         .object({
           userId: z.string().optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { userId, ...paginationInput } = input;
@@ -76,16 +78,18 @@ export const fineRouter = createTRPCRouter({
       // If no userId provided and user is logged in, use their ID
       const targetUserId = userId ?? currentUserId;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        paid: false,
+        ...(targetUserId ? { userId: targetUserId } : {}),
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.fine.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { createdAt: "desc" },
-            where: {
-              paid: false,
-              ...(targetUserId ? { userId: targetUserId } : {}),
-            },
+            skip,
+            orderBy: { createdAt: "desc" },
+            where,
             include: {
               user: {
                 select: {
@@ -114,8 +118,10 @@ export const fineRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.fine.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
@@ -126,21 +132,23 @@ export const fineRouter = createTRPCRouter({
         .object({
           paid: z.boolean().optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { paid, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        userId: ctx.session.user.id,
+        ...(paid !== undefined ? { paid } : {}),
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.fine.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { createdAt: "desc" },
-            where: {
-              userId: ctx.session.user.id,
-              ...(paid !== undefined ? { paid } : {}),
-            },
+            skip,
+            orderBy: { createdAt: "desc" },
+            where,
             include: {
               loan: {
                 include: {
@@ -162,8 +170,10 @@ export const fineRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.fine.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 

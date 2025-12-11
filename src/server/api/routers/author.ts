@@ -8,24 +8,24 @@ import {
   librarianProcedure,
 } from "~/server/api/trpc";
 import {
-	cursorPaginationSchema,
-	paginateWithCursor,
-	type CursorPaginationInput,
+	offsetPaginationSchema,
+	paginateWithOffset,
+	type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 
 export const authorRouter = createTRPCRouter({
 
   getAll: publicProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.author.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
+            skip,
+            orderBy: { name: "asc" },
             include: {
               books: {
                 include: {
@@ -35,8 +35,10 @@ export const authorRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.author.count();
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -71,17 +73,26 @@ export const authorRouter = createTRPCRouter({
 
   search: publicProcedure
     .input(
-      z.object({ query: z.string().min(1) }).merge(cursorPaginationSchema),
+      z.object({ query: z.string().min(1) }).merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.author.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
+            skip,
+            orderBy: { name: "asc" },
+            where: {
+              name: {
+                contains: query,
+              },
+            },
+          });
+        },
+        async () => {
+          return await ctx.db.author.count({
             where: {
               name: {
                 contains: query,
@@ -90,7 +101,6 @@ export const authorRouter = createTRPCRouter({
           });
         },
         paginationInput,
-        { id: "asc" },
       );
     }),
 

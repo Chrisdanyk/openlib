@@ -7,9 +7,9 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 
 export const searchRouter = createTRPCRouter({
@@ -39,7 +39,7 @@ export const searchRouter = createTRPCRouter({
             .default("relevance"),
           sortOrder: z.enum(["asc", "desc"]).default("desc"),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, filters, sortBy, sortOrder, ...paginationInput } = input;
@@ -126,12 +126,12 @@ export const searchRouter = createTRPCRouter({
           break;
       }
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy: cursorOrderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.book.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: cursorOrderBy ?? orderBy,
+            skip,
+            orderBy,
             where,
             include: {
               authors: {
@@ -157,8 +157,10 @@ export const searchRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.book.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -177,7 +179,7 @@ export const searchRouter = createTRPCRouter({
             })
             .optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, filters, ...paginationInput } = input;
@@ -234,12 +236,12 @@ export const searchRouter = createTRPCRouter({
         };
       }
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.book.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { title: "asc" },
+            skip,
+            orderBy: { title: "asc" },
             where,
             include: {
               authors: {
@@ -265,8 +267,10 @@ export const searchRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.book.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -277,7 +281,7 @@ export const searchRouter = createTRPCRouter({
         .object({
           query: z.string().min(1).optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, ...paginationInput } = input;
@@ -290,12 +294,12 @@ export const searchRouter = createTRPCRouter({
         ];
       }
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.author.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
+            skip,
+            orderBy: { name: "asc" },
             where,
             include: {
               _count: {
@@ -306,8 +310,10 @@ export const searchRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.author.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 

@@ -54,16 +54,16 @@ export type CursorPaginationResult<T> = {
 };
 
 /**
- * Offset-based pagination result
+ * Offset-based pagination result (Django REST Framework style)
  */
 export type OffsetPaginationResult<T> = {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
+  page_size: number;      // limit
+  items: number;           // total count
+  pages: number;           // totalPages
+  page: number;            // current page
+  next: number | null;     // next page number or null
+  previous: number | null; // previous page number or null
+  results: T[];           // the actual data
 };
 
 /**
@@ -145,7 +145,7 @@ export async function paginateWithCursor<T extends { id: string }>(
 }
 
 /**
- * Helper function for offset-based pagination
+ * Helper function for offset-based pagination (Django REST Framework style)
  * Use this with Prisma's findMany with skip/take
  */
 export async function paginateWithOffset<T>(
@@ -160,7 +160,7 @@ export async function paginateWithOffset<T>(
   const page = input.page ?? 1;
   const skip = (page - 1) * limit;
 
-  const [items, total] = await Promise.all([
+  const [results, total] = await Promise.all([
     queryFn({ take: limit, skip }),
     countFn(),
   ]);
@@ -170,13 +170,13 @@ export async function paginateWithOffset<T>(
   const hasPreviousPage = page > 1;
 
   return {
-    items,
-    total,
+    page_size: limit,
+    items: total,
+    pages: totalPages,
     page,
-    limit,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
+    next: hasNextPage ? page + 1 : null,
+    previous: hasPreviousPage ? page - 1 : null,
+    results,
   };
 }
 

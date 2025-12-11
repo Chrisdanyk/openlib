@@ -7,24 +7,24 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 
 export const categoryRouter = createTRPCRouter({
   // Get all categories (public)
   getAll: publicProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.category.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
+            skip,
+            orderBy: { name: "asc" },
             include: {
               _count: {
                 select: {
@@ -34,8 +34,10 @@ export const categoryRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.category.count();
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -86,23 +88,25 @@ export const categoryRouter = createTRPCRouter({
   // Search categories
   search: publicProcedure
     .input(
-      z.object({ query: z.string().min(1) }).merge(cursorPaginationSchema),
+      z.object({ query: z.string().min(1) }).merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        OR: [
+          { name: { contains: query } },
+          { description: { contains: query } },
+        ],
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.category.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
-            where: {
-              OR: [
-                { name: { contains: query } },
-                { description: { contains: query } },
-              ],
-            },
+            skip,
+            orderBy: { name: "asc" },
+            where,
             include: {
               _count: {
                 select: {
@@ -112,8 +116,10 @@ export const categoryRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.category.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -219,7 +225,7 @@ export const categoryRouter = createTRPCRouter({
   // Get books by category
   getBooks: publicProcedure
     .input(
-      z.object({ categoryId: z.string() }).merge(cursorPaginationSchema),
+      z.object({ categoryId: z.string() }).merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { categoryId, ...paginationInput } = input;
@@ -236,19 +242,21 @@ export const categoryRouter = createTRPCRouter({
         });
       }
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        categories: {
+          some: {
+            categoryId,
+          },
+        },
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.book.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { title: "asc" },
-            where: {
-              categories: {
-                some: {
-                  categoryId,
-                },
-              },
-            },
+            skip,
+            orderBy: { title: "asc" },
+            where,
             include: {
               authors: {
                 include: {
@@ -263,8 +271,10 @@ export const categoryRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.book.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 });

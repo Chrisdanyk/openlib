@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { PageHeader } from "~/components/shared/PageHeader";
-import { DataTable, Column } from "~/components/shared/DataTable";
+import { type Column, DataTable } from "~/components/shared/DataTable";
 import { AppLayout } from "~/components/layout/AppLayout";
 import { Button } from "~/components/ui/button";
 import { Plus, User, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { mockAuthors } from "~/lib/mock-data";
 
 import { api } from "~/trpc/react";
 
@@ -19,25 +18,26 @@ type Author = {
 };
 
 export default function AdminAuthorsPage() {
-  const { data: authorsData, isLoading, error } = api.author.getAll.useQuery(
-    { limit: 10, cursor: undefined, direction: "forward" },
-  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
 
-  const allAuthors = authorsData?.items ?? [];
-
-  const filteredAuthors = allAuthors.filter((author) =>
-    search
-      ? author.name.toLowerCase().includes(search.toLowerCase()) ||
-      (author.bio && author.bio.toLowerCase().includes(search.toLowerCase()))
-      : true
+  const { data: searchData, isLoading: searchLoading } = api.author.search.useQuery(
+    { query: search, page, limit },
+    { enabled: search.length > 0, retry: false }
   );
 
-  const paginatedAuthors = filteredAuthors.slice((page - 1) * limit, page * limit);
-  const total = filteredAuthors.length;
-  const pageCount = Math.ceil(total / limit);
+  const { data: authorsData, isLoading, error } = api.author.getAll.useQuery(
+    { page, limit },
+    { enabled: search.length === 0, retry: false }
+  );
+
+  const data = (search.length > 0 ? searchData : authorsData) ?? null;
+  const isLoadingData = search.length > 0 ? searchLoading : isLoading;
+
+  const authors = data?.results ?? [];
+  const total = data?.items ?? 0;
+  const pageCount = data?.pages ?? 1;
 
   const columns: Column<Author>[] = [
     {
@@ -63,7 +63,7 @@ export default function AdminAuthorsPage() {
       header: "Bio",
       cell: (author) => (
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {author.bio || "-"}
+          {author.bio ?? "-"}
         </p>
       ),
     },
@@ -114,8 +114,8 @@ export default function AdminAuthorsPage() {
         )}
 
         <DataTable
-          loading={isLoading}
-          data={paginatedAuthors}
+          loading={isLoadingData}
+          data={authors}
           columns={columns}
           total={total}
           page={page}

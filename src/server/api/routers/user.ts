@@ -10,24 +10,24 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 
 export const userRouter = createTRPCRouter({
   // Get all users (librarian only)
   getAll: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.user.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { createdAt: "desc" },
+            skip,
+            orderBy: { createdAt: "desc" },
             select: {
               id: true,
               name: true,
@@ -47,8 +47,10 @@ export const userRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.user.count();
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
@@ -270,23 +272,25 @@ export const userRouter = createTRPCRouter({
   // Search users (librarian only)
   search: librarianProcedure
     .input(
-      z.object({ query: z.string().min(1) }).merge(cursorPaginationSchema),
+      z.object({ query: z.string().min(1) }).merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { query, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        OR: [
+          { name: { contains: query } },
+          { email: { contains: query } },
+        ],
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.user.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { name: "asc" },
-            where: {
-              OR: [
-                { name: { contains: query } },
-                { email: { contains: query } },
-              ],
-            },
+            skip,
+            orderBy: { name: "asc" },
+            where,
             select: {
               id: true,
               name: true,
@@ -304,8 +308,10 @@ export const userRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.user.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 

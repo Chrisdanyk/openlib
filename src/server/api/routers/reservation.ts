@@ -9,9 +9,9 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 import {
   RESERVATION_CONFIG,
@@ -22,16 +22,16 @@ import {
 export const reservationRouter = createTRPCRouter({
   // Get all reservations (librarian only)
   getAll: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.reservation.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { reservedAt: "desc" },
+            skip,
+            orderBy: { reservedAt: "desc" },
             include: {
               user: {
                 select: {
@@ -57,26 +57,30 @@ export const reservationRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.reservation.count();
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
   // Get pending reservations (librarian only - to see what needs fulfillment)
   getPending: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        status: ReservationStatus.PENDING,
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.reservation.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { reservedAt: "asc" }, // Oldest first
-            where: {
-              status: ReservationStatus.PENDING,
-            },
+            skip,
+            orderBy: { reservedAt: "asc" }, // Oldest first
+            where,
             include: {
               user: {
                 select: {
@@ -102,8 +106,10 @@ export const reservationRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.reservation.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 
@@ -114,21 +120,23 @@ export const reservationRouter = createTRPCRouter({
         .object({
           status: z.nativeEnum(ReservationStatus).optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { status, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        userId: ctx.session.user.id,
+        ...(status ? { status } : {}),
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.reservation.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { reservedAt: "desc" },
-            where: {
-              userId: ctx.session.user.id,
-              ...(status ? { status } : {}),
-            },
+            skip,
+            orderBy: { reservedAt: "desc" },
+            where,
             include: {
               book: {
                 include: {
@@ -147,29 +155,33 @@ export const reservationRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.reservation.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
   // Get reservations for a specific book
   getByBookId: publicProcedure
     .input(
-      z.object({ bookId: z.string() }).merge(cursorPaginationSchema),
+      z.object({ bookId: z.string() }).merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { bookId, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        bookId,
+        status: ReservationStatus.PENDING,
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.reservation.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { reservedAt: "asc" },
-            where: {
-              bookId,
-              status: ReservationStatus.PENDING,
-            },
+            skip,
+            orderBy: { reservedAt: "asc" },
+            where,
             include: {
               user: {
                 select: {
@@ -181,8 +193,10 @@ export const reservationRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.reservation.count({ where });
+        },
         paginationInput,
-        { id: "asc" },
       );
     }),
 

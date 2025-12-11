@@ -9,9 +9,9 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import {
-  cursorPaginationSchema,
-  paginateWithCursor,
-  type CursorPaginationInput,
+  offsetPaginationSchema,
+  paginateWithOffset,
+  type OffsetPaginationInput,
 } from "~/server/utils/pagination";
 import {
   LOAN_CONFIG,
@@ -22,16 +22,16 @@ import {
 
 export const loanRouter = createTRPCRouter({
   getAll: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.loan.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { borrowedAt: "desc" },
+            skip,
+            orderBy: { borrowedAt: "desc" },
             include: {
               user: {
                 select: {
@@ -56,8 +56,10 @@ export const loanRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.loan.count();
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
@@ -67,7 +69,7 @@ export const loanRouter = createTRPCRouter({
         .object({
           userId: z.string().optional(),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { userId, ...paginationInput } = input;
@@ -75,16 +77,18 @@ export const loanRouter = createTRPCRouter({
 
       const targetUserId = userId ?? currentUserId;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        returnedAt: null,
+        ...(targetUserId ? { userId: targetUserId } : {}),
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.loan.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { dueAt: "asc" },
-            where: {
-              returnedAt: null,
-              ...(targetUserId ? { userId: targetUserId } : {}),
-            },
+            skip,
+            orderBy: { dueAt: "asc" },
+            where,
             include: {
               user: {
                 select: {
@@ -109,29 +113,33 @@ export const loanRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.loan.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
   getOverdue: librarianProcedure
-    .input(cursorPaginationSchema.optional())
+    .input(offsetPaginationSchema.optional())
     .query(async ({ ctx, input }) => {
-      const paginationInput: CursorPaginationInput = input ?? {};
+      const paginationInput: OffsetPaginationInput = input ?? {};
       const now = new Date();
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        returnedAt: null,
+        dueAt: {
+          lt: now,
+        },
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.loan.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { dueAt: "asc" },
-            where: {
-              returnedAt: null,
-              dueAt: {
-                lt: now,
-              },
-            },
+            skip,
+            orderBy: { dueAt: "asc" },
+            where,
             include: {
               user: {
                 select: {
@@ -156,8 +164,10 @@ export const loanRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.loan.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
@@ -167,25 +177,27 @@ export const loanRouter = createTRPCRouter({
         .object({
           includeReturned: z.boolean().default(false),
         })
-        .merge(cursorPaginationSchema),
+        .merge(offsetPaginationSchema),
     )
     .query(async ({ ctx, input }) => {
       const { includeReturned, ...paginationInput } = input;
 
-      return paginateWithCursor(
-        async ({ take, cursor, orderBy }) => {
+      const where = {
+        userId: ctx.session.user.id,
+        ...(includeReturned
+          ? {}
+          : {
+              returnedAt: null,
+            }),
+      };
+
+      return paginateWithOffset(
+        async ({ take, skip }) => {
           return await ctx.db.loan.findMany({
             take,
-            cursor: cursor ? { id: cursor.id } : undefined,
-            orderBy: orderBy ?? { borrowedAt: "desc" },
-            where: {
-              userId: ctx.session.user.id,
-              ...(includeReturned
-                ? {}
-                : {
-                    returnedAt: null,
-                  }),
-            },
+            skip,
+            orderBy: { borrowedAt: "desc" },
+            where,
             include: {
               bookCopy: {
                 include: {
@@ -203,8 +215,10 @@ export const loanRouter = createTRPCRouter({
             },
           });
         },
+        async () => {
+          return await ctx.db.loan.count({ where });
+        },
         paginationInput,
-        { id: "desc" },
       );
     }),
 
