@@ -257,6 +257,11 @@ export const searchRouter = createTRPCRouter({
                   status: CopyStatus.AVAILABLE,
                 },
               },
+              _count: {
+                select: {
+                  copies: true,
+                },
+              },
             },
           });
         },
