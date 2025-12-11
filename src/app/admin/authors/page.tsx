@@ -9,17 +9,29 @@ import { Plus, User, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { mockAuthors } from "~/lib/mock-data";
 
-type Author = typeof mockAuthors[0];
+import { api } from "~/trpc/react";
+
+type Author = {
+  id: string;
+  name: string;
+  bio: string | null;
+  books?: Array<{ book: { id: string; title: string } }>;
+};
 
 export default function AdminAuthorsPage() {
+  const { data: authorsData, isLoading, error } = api.author.getAll.useQuery(
+    { limit: 10, cursor: undefined, direction: "forward" },
+  );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
 
-  const filteredAuthors = mockAuthors.filter((author) =>
+  const allAuthors = authorsData?.items ?? [];
+
+  const filteredAuthors = allAuthors.filter((author) =>
     search
       ? author.name.toLowerCase().includes(search.toLowerCase()) ||
-        (author.bio && author.bio.toLowerCase().includes(search.toLowerCase()))
+      (author.bio && author.bio.toLowerCase().includes(search.toLowerCase()))
       : true
   );
 
@@ -94,7 +106,15 @@ export default function AdminAuthorsPage() {
           }
         />
 
+        {error && (
+          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
+            <p className="font-medium">Error loading authors</p>
+            <p className="text-sm mt-1">{error.message}</p>
+          </div>
+        )}
+
         <DataTable
+          loading={isLoading}
           data={paginatedAuthors}
           columns={columns}
           total={total}
